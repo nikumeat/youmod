@@ -713,7 +713,8 @@ static CGFloat YouModSpeedForHoldIndex(NSInteger index) {
         }
         if (!playerViewController.YouModHoldGesture && INTFORVAL(HoldToSpeedIndex) != 0) {
             playerViewController.YouModHoldGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:playerViewController action:@selector(YouModHoldToSpeed:)];
-            playerViewController.YouModHoldGesture.minimumPressDuration = 0.4;
+            NSInteger durationIndex = [[NSUserDefaults standardUserDefaults] objectForKey:HoldPressDurationIndex] ? INTFORVAL(HoldPressDurationIndex) : 2;
+            playerViewController.YouModHoldGesture.minimumPressDuration = 0.1 + MAX(0, MIN(18, durationIndex)) * 0.05;
             [pv addGestureRecognizer:playerViewController.YouModHoldGesture];   
         }
     }
@@ -1327,6 +1328,8 @@ static CGFloat remainingOverlayWidth(YTPlayerViewController *pvc, CGFloat fullWi
     static CGPoint startLocation;
     static BOOL initialLockState;
     static BOOL isPendingToggle;
+    static CGFloat swipeSpeed;
+    static BOOL swipeAdjusted;
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
@@ -1344,6 +1347,8 @@ static CGFloat remainingOverlayWidth(YTPlayerViewController *pvc, CGFloat fullWi
 
         initialLockState = IS_ENABLED(GlobalSpeedLocked);
         isPendingToggle = NO;
+        swipeAdjusted = NO;
+        swipeSpeed = speed;
         startLocation = [gesture locationInView:self.playerView];
         
         if (!initialLockState) {
@@ -1358,6 +1363,18 @@ static CGFloat remainingOverlayWidth(YTPlayerViewController *pvc, CGFloat fullWi
             [self YouModShowSpeedToast:speed isLocked:YES];
         }
     } else if (gesture.state == UIGestureRecognizerStateChanged) {
+        if (IS_ENABLED(HoldSwipeSpeed)) {
+            CGPoint current = [gesture locationInView:self.playerView];
+            CGFloat delta = startLocation.y - current.y;
+            CGFloat next = fmax(0.25, fmin(5.0, speed + round(delta / 30.0) * 0.25));
+            if (fabs(next - swipeSpeed) >= 0.01) {
+                swipeSpeed = next;
+                swipeAdjusted = YES;
+                [self setPlaybackRate:swipeSpeed];
+                [self YouModShowSpeedToast:swipeSpeed isLocked:IS_ENABLED(HoldSwipeKeepSpeed)];
+            }
+            return;
+        }
         if (!IS_ENABLED(LockSpeed)) return;
         
         CGPoint currentLocation = [gesture locationInView:self.playerView];
@@ -1397,6 +1414,19 @@ static CGFloat remainingOverlayWidth(YTPlayerViewController *pvc, CGFloat fullWi
                gesture.state == UIGestureRecognizerStateCancelled || 
                gesture.state == UIGestureRecognizerStateFailed) {
 
+        if (IS_ENABLED(HoldSwipeSpeed)) {
+            if (IS_ENABLED(HoldSwipeKeepSpeed)) {
+                CGFloat finalSpeed = swipeAdjusted ? swipeSpeed : speed;
+                [self setPlaybackRate:finalSpeed];
+                [defaults setFloat:finalSpeed forKey:GlobalSavedNormalRate];
+            } else {
+                CGFloat normal = [defaults floatForKey:GlobalSavedNormalRate];
+                [self setPlaybackRate:(normal >= 0.25 ? normal : 1.0)];
+            }
+            swipeAdjusted = NO;
+            [self YouModHideSpeedToast];
+            return;
+        }
         BOOL finalLockState = initialLockState;
         if (gesture.state == UIGestureRecognizerStateEnded || (gesture.state == UIGestureRecognizerStateCancelled && isPendingToggle)) {
             if (IS_ENABLED(LockSpeed) && isPendingToggle) {
