@@ -291,6 +291,9 @@ static NSString *GetCacheSize() { // YTLite - @dayanch96
             YMHeader(@""),
             YMPicker(YMLOC(@"HOLD_TO_SPEED"), YMLOC(@"HOLD_TO_SPEED_DESC"), HoldToSpeedIndex, (@[YMLOC(@"DEFAULT"), @"0.25x", @"0.5x", @"0.75x", @"1x", @"1.25x", @"1.5x", @"1.75x", @"2x", @"3x", @"4x", @"5x"]), 0),
             [YMToggle(YMLOC(@"LOCK_SPEED"), YMLOC(@"LOCK_SPEED_DESC"), LockSpeed) visibleWhenKey:HoldToSpeedIndex isGreaterThan:0],
+            [YMToggle(@"Hold + vertical swipe to change speed", @"Drag up to accelerate, down to slow down.", HoldSwipeSpeed) visibleWhenKey:HoldToSpeedIndex isGreaterThan:0],
+            [YMPicker(@"Hold recognition time", @"Delay before hold-to-speed activates.", HoldPressDurationIndex, (@[@"0.10s", @"0.15s", @"0.20s", @"0.25s", @"0.30s", @"0.35s", @"0.40s", @"0.45s", @"0.50s", @"0.55s", @"0.60s", @"0.65s", @"0.70s", @"0.75s", @"0.80s", @"0.85s", @"0.90s", @"0.95s", @"1.00s"]), 2) visibleWhenKey:HoldToSpeedIndex isGreaterThan:0],
+            [YMToggle(@"Keep speed after release", @"Keep the adjusted speed after lifting your finger.", HoldSwipeKeepSpeed) visibleWhenBoolKey:HoldSwipeSpeed],
             YMHeader(YMLOC(@"INTERFACE")),
             YMAction(YMLOC(@"MANAGE_OVERLAY_BUTTONS"), YMLOC(@"MANAGE_OVERLAY_BUTTONS_DESC"), ^(UIViewController *vc) {
                 (void)vc;
